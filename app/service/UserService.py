@@ -14,3 +14,11 @@ def get_all_users():
        )
        for user in users
    ]
+
+def register_embedding(id_user, embedding):
+    session = Connection.get_session()
+    user = session.query(User).filter(User.idUser == id_user).first()
+    if user:
+        user.encode = embedding
+        session.commit()
+    session.close()
