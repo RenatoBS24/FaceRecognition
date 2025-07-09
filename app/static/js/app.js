@@ -176,8 +176,35 @@ retakeBtn.addEventListener('click', () => {
 });
 
 confirmBtn.addEventListener('click', () => {
-    showMessage("¡Foto confirmada! Puedes continuar con el proceso.", "#34eb77");
+    showMessage("¡Foto confirmada! Enviando al servidor...", "#34eb77");
     actionButtons.style.display = "none";
+
+    // Convertir la imagen base64 a Blob
+    function dataURLtoBlob(dataurl) {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--) u8arr[n] = bstr.charCodeAt(n);
+        return new Blob([u8arr], {type:mime});
+    }
+
+    const blob = dataURLtoBlob(capturedPhoto.src);
+    const formData = new FormData();
+    formData.append('file', blob, 'rostro.png');
+
+    fetch('/api/authentication/register/2', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        showMessage("¡Rostro registrado exitosamente!", "#34eb77");
+    })
+    .catch(() => {
+        showMessage("Error al registrar el rostro.", "#ff6b6b");
+    });
 });
 window.addEventListener('beforeunload', () => {
     if (camera) camera.stop();

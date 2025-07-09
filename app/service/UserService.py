@@ -1,6 +1,7 @@
 from ..schema.UserResponse import UserResponse
 from ..core.model.user import User
 from ..utils import Connection
+import pickle
 
 
 def get_all_users():
@@ -15,10 +16,19 @@ def get_all_users():
        for user in users
    ]
 
+
 def register_embedding(id_user, embedding):
     session = Connection.get_session()
-    user = session.query(User).filter(User.idUser == id_user).first()
-    if user:
-        user.encode = embedding
+    try:
+        user = session.query(User).filter(User.idUser == id_user).first()
+        if not user:
+            session.close()
+            raise ValueError(f"Usuario con ID {id_user} no encontrado")
+        user.encode = pickle.dumps(embedding)
         session.commit()
-    session.close()
+        session.close()
+        return True
+    except Exception as e:
+        session.rollback()
+        session.close()
+        raise e
