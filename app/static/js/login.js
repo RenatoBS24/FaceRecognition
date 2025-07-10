@@ -105,8 +105,8 @@ startBtn.addEventListener('click', async () => {
     onFrame: async () => {
         await faceMesh.send({ image: video });
     },
-    width: 320,
-    height: 240
+    width: 660,
+    height: 480
 });
 
     enableCameraFlow();
@@ -155,19 +155,22 @@ function startWebSocket() {
     };
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        if (data.verified) {
+        if (data.successful) {
             showMessage("¡Autenticación exitosa!", "#34eb77");
             sending = false;
             ws.close();
             if (camera) camera.stop();
         } else if (data.error) {
+            if (data.error.includes("no hay un usuario registrado")) {
             showMessage(data.error, "#ff6b6b");
-            console.log(data.error);
             sending = false;
             ws.close();
             startBtn.style.display = "";
             startBtn.disabled = false;
             startBtn.textContent = "Reintentar";
+            } else {
+                showMessage("Buscando rostro...", "#ff6b6b");
+            }
         }
     };
     ws.onerror = () => {
@@ -190,7 +193,7 @@ async function sendFrames() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataURL = canvas.toDataURL('image/jpeg', 0.7);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.9);
         ws.send(JSON.stringify({ image: dataURL }));
         await new Promise(r => setTimeout(r, 500)); // cada 500ms
     }

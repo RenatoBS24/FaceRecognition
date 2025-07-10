@@ -5,7 +5,7 @@ import tempfile
 from deepface import DeepFace
 from fastapi import HTTPException, UploadFile,File
 from fastapi.responses import JSONResponse
-from starlette.websockets import WebSocket
+from starlette.websockets import WebSocket, WebSocketDisconnect
 from app.service import UserService
 from app.utils import decode
 import cv2
@@ -18,35 +18,56 @@ def cosine_similarity(vec1,vec2):
     vec2 = np.array(vec2)
     return np.dot(vec1,vec2)/(np.linalg.norm(vec1)*np.linalg.norm(vec2))
 
+
 async def face_recognition_ws(websocket: WebSocket, id_user: int):
     await websocket.accept()
+    print(f"WebSocket conectado para usuario: {id_user}")
     register_embedding = UserService.get_embedding(id_user)
     if register_embedding is None:
-        await  websocket.send_text(json.dumps({"error": "no hay un usuario registrado con ese id"}))
+        await websocket.send_text(json.dumps({"error": "no hay un usuario registrado con ese id"}))
         await websocket.close()
         return
 
     umbral = 0.7
-    while True:
-        try:
-            code = await websocket.receive_text()
-            image = decode.decode_image_base64(code)
-            array_np = np.frombuffer(image, dtype=np.uint8)
-            img = cv2.imdecode(array_np, cv2.IMREAD_COLOR)
+    try:
+        while True:
             try:
-                embedding = DeepFace.represent(img_path=img, enforce_detection=True)[0]["embedding"]
-                similarity =cosine_similarity(embedding,register_embedding)
+                code = await websocket.receive_text()
+                print("Datos recibidos del frontend")
+                if not code:
+                    await websocket.send_text(json.dumps({"error": "Datos vacíos"}))
+                    continue
+
+                image = decode.decode_image_base64(code)
+                array_np = np.frombuffer(image, dtype=np.uint8)
+                img = cv2.imdecode(array_np, cv2.IMREAD_COLOR)
+
+                if img is None:
+                    await websocket.send_text(json.dumps({"error": "Imagen inválida"}))
+                    continue
+
+                embedding = DeepFace.represent(img_path=img, enforce_detection=False)[0]["embedding"]
+                similarity = cosine_similarity(embedding, register_embedding)
+
                 if similarity > umbral:
-                    await  websocket.send_text(json.dumps({"successful": "Autenticacion exitosa"}))
+                    await websocket.send_text(json.dumps({"successful": "Autenticacion exitosa"}))
                     await websocket.close()
                     break
                 else:
-                    await  websocket.send_text(json.dumps({"error": "Autenticacion fallida"}))
+                    await websocket.send_text(json.dumps({"error": "Autenticacion fallida"}))
+
             except Exception as e:
-                await  websocket.send_text(json.dumps({"error": f"Error: No se detectó rostro: {str(e)}"}))
-        except Exception as e:
-            await  websocket.send_text(json.dumps({"error": f"Error de conexión: {str(e)}"}))
-            break
+                print(f"Error procesando imagen: {str(e)}")
+                await websocket.send_text(json.dumps({"error": f"Error: No se detectó rostro: {str(e)}"}))
+
+    except WebSocketDisconnect:
+        print(f"WebSocket desconectado para usuario: {id_user}")
+    except Exception as e:
+        print(f"Error crítico en WebSocket: {str(e)}")
+        try:
+            await websocket.close()
+        except:
+            pass
 
 def face_recognition(id_user:int,image:bytes):
     array_np = np.frombuffer(image, dtype=np.uint8)
