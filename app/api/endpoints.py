@@ -15,10 +15,9 @@ router = APIRouter(
 async def get_users():
   return UserService.get_all_users()
 
-@router.post("/login")
-async def login(id:int,file : UploadFile = File(...)):
-    image_bytes = await file.read()
-    return {"message": "Login successful"}
+@router.websocket("/ws/login/{id_user}")
+async def register(websocket: WebSocket, id_user: int):
+    await face_recognition_ws(websocket, id_user)
 
 
 @router.websocket("/ws/register/{id_user}")

@@ -16,6 +16,17 @@ def get_all_users():
        for user in users
    ]
 
+def get_embedding(id_user):
+    session = Connection.get_session()
+    try:
+        user = session.query(User).filter(User.idUser == id_user).first()
+        if not user:
+            session.close()
+            raise ValueError(f"Usuario con ID {id_user} no encontrado")
+        return pickle.loads(user.encode)
+    except Exception as e:
+        session.close()
+        raise e
 
 def register_embedding(id_user, embedding):
     session = Connection.get_session()

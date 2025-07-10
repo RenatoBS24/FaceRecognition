@@ -3,11 +3,6 @@ const startBtn = document.getElementById('startBtn');
 const errorMessage = document.getElementById('errorMessage');
 const progressCanvas = document.getElementById('progressCanvas');
 const ctx = progressCanvas.getContext('2d');
-const capturedPhoto = document.getElementById('capturedPhoto');
-const actionButtons = document.getElementById('actionButtons');
-const confirmBtn = document.getElementById('confirmBtn');
-const retakeBtn = document.getElementById('retakeBtn');
-
 let camera = null;
 let faceMesh = null;
 let faceFound = false;
@@ -15,7 +10,8 @@ let stableTimer = null;
 let countdown = 3;
 let progress = 0;
 let progressAnim = null;
-let photoTaken = false;
+let ws = null;
+let sending = false;
 
 function showMessage(msg, color = "#6ec6ff") {
     errorMessage.textContent = msg;
@@ -26,7 +22,6 @@ function resizeCanvas() {
     progressCanvas.width = video.videoWidth;
     progressCanvas.height = video.videoHeight;
 }
-
 video.addEventListener('loadedmetadata', resizeCanvas);
 
 function drawProgressCircle(progress) {
@@ -82,10 +77,7 @@ function stopProgressAnimation() {
 
 function enableCameraFlow() {
     video.style.display = "";
-    capturedPhoto.style.display = "none";
-    actionButtons.style.display = "none";
-    showMessage("Coloca tu rostro dentro del marco y mantente quieto para tomar la foto.", "#b3c6e0");
-    photoTaken = false;
+    showMessage("Coloca tu rostro dentro del marco y mantente quieto para iniciar sesión.", "#b3c6e0");
     faceFound = false;
     startBtn.style.display = "none";
     if (camera) camera.start();
@@ -110,19 +102,19 @@ startBtn.addEventListener('click', async () => {
     faceMesh.onResults(onResults);
 
     camera = new Camera(video, {
-        onFrame: async () => {
-            if (!photoTaken) await faceMesh.send({ image: video });
-        },
-        width: 320,
-        height: 240
-    });
+    onFrame: async () => {
+        await faceMesh.send({ image: video });
+    },
+    width: 320,
+    height: 240
+});
 
     enableCameraFlow();
     camera.start();
 });
 
 function onResults(results) {
-    if (photoTaken) return;
+    if (sending) return;
 
     if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         if (!faceFound) {
@@ -138,9 +130,9 @@ function onResults(results) {
                 } else {
                     clearInterval(stableTimer);
                     faceFound = false;
-                    showMessage("¡Foto tomada correctamente! ¿Te gusta cómo quedó?", "#34eb77");
+                    showMessage("¡Iniciando autenticación en vivo!", "#34eb77");
                     stopProgressAnimation();
-                    captureFace();
+                    startWebSocket();
                 }
             }, 1000);
         }
@@ -154,69 +146,57 @@ function onResults(results) {
     }
 }
 
-function captureFace() {
-    if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-        setTimeout(captureFace, 100);
-        return;
-    }
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext('2d');
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    capturedPhoto.src = canvas.toDataURL('image/png');
-    capturedPhoto.style.display = "";
-    video.style.display = "none";
-    actionButtons.style.display = "flex";
-    photoTaken = true;
+function startWebSocket() {
+    ws = new WebSocket("/api/authentication/ws/login/1");
+    ws.onopen = () => {
+        sending = true;
+        sendFrames();
+        showMessage("Autenticando... Mantente frente a la cámara.", "#b3c6e0");
+    };
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.verified) {
+            showMessage("¡Autenticación exitosa!", "#34eb77");
+            sending = false;
+            ws.close();
+            if (camera) camera.stop();
+        } else if (data.error) {
+            showMessage(data.error, "#ff6b6b");
+            console.log(data.error);
+            sending = false;
+            ws.close();
+            startBtn.style.display = "";
+            startBtn.disabled = false;
+            startBtn.textContent = "Reintentar";
+        }
+    };
+    ws.onerror = () => {
+        showMessage("Error de conexión con el servidor.", "#ff6b6b");
+        sending = false;
+        console.log("Ocurrio un error")
+        ws.close();
+        startBtn.style.display = "";
+        startBtn.disabled = false;
+        startBtn.textContent = "Reintentar";
+    };
+    ws.onclose = () => {
+        sending = false;
+    };
 }
 
-retakeBtn.addEventListener('click', () => {
-    enableCameraFlow();
-});
-
-confirmBtn.addEventListener('click', () => {
-    showMessage("¡Foto confirmada! Enviando al servidor...", "#34eb77");
-    actionButtons.style.display = "none";
-    function dataURLtoBlob(dataurl) {
-        const arr = dataurl.split(',');
-        const mime = arr[0].match(/:(.*?);/)[1];
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while(n--) u8arr[n] = bstr.charCodeAt(n);
-        return new Blob([u8arr], {type:mime});
+async function sendFrames() {
+    while (sending && ws && ws.readyState === 1) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.7);
+        ws.send(JSON.stringify({ image: dataURL }));
+        await new Promise(r => setTimeout(r, 500)); // cada 500ms
     }
-
-    const blob = dataURLtoBlob(capturedPhoto.src);
-    const formData = new FormData();
-    formData.append('file', blob, 'rostro.png');
-
-    fetch('/api/authentication/register/2', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-    if (data.error_code) {
-        if (data.error_code === "no_face_detected") {
-            showMessage("No se detectó tu rostro. Intenta de nuevo.", "#ff6b6b");
-            enableCameraFlow();
-        } else if (data.error_code === "spoofing_detected") {
-            showMessage("La imagen parece falsa. Por favor, usa una foto real.", "#ff6b6b");
-            enableCameraFlow();
-        } else {
-            showMessage(data.detail || "Error al registrar el rostro.", "#ff6b6b");
-        }
-    } else {
-        showMessage("¡Rostro registrado exitosamente!", "#34eb77");
-    }
-})
-.catch(() => {
-    showMessage("Error al registrar el rostro.", "#ff6b6b");
-});
-});
+}
 window.addEventListener('beforeunload', () => {
     if (camera) camera.stop();
     stopProgressAnimation();
+    if (ws) ws.close();
 });
