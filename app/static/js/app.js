@@ -210,6 +210,9 @@ confirmBtn.addEventListener('click', () => {
         }
     } else {
         showMessage("¡Rostro registrado exitosamente!", "#34eb77");
+        setTimeout(() => {
+        window.location.href = "/";
+        }, 2000);
     }
 })
 .catch(() => {

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
-DATABASE_URL = "mysql+pymysql://root:123456@localhost:3307/miusuario"
+DATABASE_URL = "mysql+pymysql://root:123456@localhost:3307/auth2F"
 engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

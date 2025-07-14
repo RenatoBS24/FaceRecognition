@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - FaceAuth</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles-api-test.css">
+</head>
+<body>
+    <div class="api-tester">
+        <h2>🔌 Probar API como Servicio</h2>
+
+        <div class="endpoint-test">
+            <h3>POST /api/authentication/register/{id_user}</h3>
+            <input type="file" id="registerFile" accept="image/*">
+            <button onclick="testRegister()">Probar Registro</button>
+            <pre id="registerResponse">Selecciona una imagen y presiona "Probar Registro"</pre>
+        </div>
+
+        <div class="endpoint-test">
+            <h3>WebSocket /api/authentication/ws/login/{id_user}</h3>
+            <button onclick="testWSLogin()">Probar Login WebSocket</button>
+            <div id="wsStatus">Presiona "Probar Login WebSocket" para conectar</div>
+        </div>
+
+        <div class="curl-examples">
+            <h3>📝 Ejemplos de uso en otras aplicaciones:</h3>
+            <code>curl -X POST -F "file=@face.jpg" http://localhost:8000/api/authentication/register/1</code>
+        </div>
+
+        <div class="actions" style="margin-top: 30px;">
+            <button onclick="goBack()">⬅️ Volver al Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        function testRegister() {
+            const fileInput = document.getElementById('registerFile');
+            const response = document.getElementById('registerResponse');
+
+            if (!fileInput.files[0]) {
+                response.textContent = 'Error: Selecciona una imagen primero';
+                return;
+            }
+
+            response.textContent = 'Simulando registro... (implementar llamada real al API)';
+        }
+
+        function testWSLogin() {
+            const status = document.getElementById('wsStatus');
+            status.textContent = 'Conectando WebSocket... (implementar conexión real)';
+        }
+
+        function goBack() {
+            window.location.href = '/dashboard';
+        }
+    </script>
+</body>
+</html>

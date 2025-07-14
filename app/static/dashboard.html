@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FaceAuth</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles-dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header>
+            <h1>🔐 FaceAuth Dashboard</h1>
+            <div class="user-info">
+                <span>Usuario: <strong>ID #1</strong></span>
+                <button onclick="logout()">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Inicios de Sesión</h3>
+                <p class="stat-number">12</p>
+            </div>
+            <div class="stat-card">
+                <h3>Último Acceso</h3>
+                <p class="stat-time">Hoy 10:30</p>
+            </div>
+            <div class="stat-card">
+                <h3>Estado del Registro</h3>
+                <p class="stat-status">✅ Activo</p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button onclick="testAuth()">🧪 Probar Autenticación</button>
+            <button onclick="updateFace()">🔄 Actualizar Rostro</button>
+            <button onclick="viewApiTest()">🔌 Probar API</button>
+        </div>
+    </div>
+
+    <script>
+        function logout() {
+            window.location.href = '/';
+        }
+        function testAuth() {
+            window.location.href = '/login';
+        }
+        function updateFace() {
+            window.location.href = '/register';
+        }
+        function viewApiTest() {
+            window.location.href = '/api-test';
+        }
+    </script>
+</body>
+</html>

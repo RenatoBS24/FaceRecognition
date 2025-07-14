@@ -16,12 +16,7 @@ async def get_users():
   return UserService.get_all_users()
 
 @router.websocket("/ws/login/{id_user}")
-async def register(websocket: WebSocket, id_user: int):
-    await face_recognition_ws(websocket, id_user)
-
-
-@router.websocket("/ws/register/{id_user}")
-async def register(websocket: WebSocket, id_user: int):
+async def login(websocket: WebSocket, id_user: int):
     await face_recognition_ws(websocket, id_user)
 
 @router.post("/register/{id_user}")

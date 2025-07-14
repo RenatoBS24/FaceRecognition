@@ -148,8 +148,8 @@ async def register_face(id_user:int, file:UploadFile=File(...)):
         embedding = DeepFace.represent(img_path=img, enforce_detection=True)[0]["embedding"]
         print(f"Intentando registrar embedding para usuario: {id_user}")
         print(f"Embedding generado: {len(embedding)} dimensiones")
-        UserService.register_embedding(id_user, embedding)
-        return {"message": "Registry successful."}
+        code_user = UserService.create_user(embedding)
+        return {"message": "Registry successful.","code":code_user}
     except HTTPException as e:
         raise
     except Exception as e:
