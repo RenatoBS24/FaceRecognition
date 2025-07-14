@@ -21,51 +21,72 @@ def cosine_similarity(vec1,vec2):
 
 async def face_recognition_ws(websocket: WebSocket, id_user: int):
     await websocket.accept()
+    processing = False
     print(f"WebSocket conectado para usuario: {id_user}")
+
     register_embedding = UserService.get_embedding(id_user)
     if register_embedding is None:
         await websocket.send_text(json.dumps({"error": "no hay un usuario registrado con ese id"}))
         await websocket.close()
         return
 
-    umbral = 0.7
+    umbral = 0.6
     try:
         while True:
             try:
-                code = await websocket.receive_text()
+                message = await websocket.receive_text()
                 print("Datos recibidos del frontend")
+                if processing:
+                    print("Saltando frame - ya procesando")
+                    continue
+
+                processing = True
+                try:
+                    data = json.loads(message)
+                    code = data.get('image', '')
+                except json.JSONDecodeError:
+                    await websocket.send_text(json.dumps({"error": "Formato JSON inválido"}))
+                    continue
+
                 if not code:
                     await websocket.send_text(json.dumps({"error": "Datos vacíos"}))
                     continue
+                try:
+                    image = decode.decode_image_base64(message)
+                    array_np = np.frombuffer(image, dtype=np.uint8)
+                    img = cv2.imdecode(array_np, cv2.IMREAD_COLOR)
 
-                image = decode.decode_image_base64(code)
-                array_np = np.frombuffer(image, dtype=np.uint8)
-                img = cv2.imdecode(array_np, cv2.IMREAD_COLOR)
+                    if img is None:
+                        await websocket.send_text(json.dumps({"error": "Imagen inválida"}))
+                        continue
+                    embedding = DeepFace.represent(img_path=img, enforce_detection=False)[0]["embedding"]
+                    similarity = cosine_similarity(embedding, register_embedding)
+                    print("La similitud entre los rostros es: " + str(similarity) + "%")
+                    if similarity > umbral:
+                        await websocket.send_text(json.dumps({"successful": "Autenticacion exitosa"}))
+                        print(f"Autenticación exitosa para usuario {id_user}")
+                        await websocket.close()
+                        break
+                    else:
+                        await websocket.send_text(json.dumps({"error": "Rostro no coincide"}))
 
-                if img is None:
-                    await websocket.send_text(json.dumps({"error": "Imagen inválida"}))
-                    continue
-
-                embedding = DeepFace.represent(img_path=img, enforce_detection=False)[0]["embedding"]
-                similarity = cosine_similarity(embedding, register_embedding)
-
-                if similarity > umbral:
-                    await websocket.send_text(json.dumps({"successful": "Autenticacion exitosa"}))
-                    await websocket.close()
-                    break
-                else:
-                    await websocket.send_text(json.dumps({"error": "Autenticacion fallida"}))
+                except Exception as e:
+                    print(f"Error procesando DeepFace: {str(e)}")
+                    await websocket.send_text(json.dumps({"error": "No se detectó rostro válido"}))
 
             except Exception as e:
-                print(f"Error procesando imagen: {str(e)}")
-                await websocket.send_text(json.dumps({"error": f"Error: No se detectó rostro: {str(e)}"}))
+                print(f"Error procesando mensaje: {str(e)}")
+                await websocket.send_text(json.dumps({"error": f"Error interno: {str(e)}"}))
+            finally:
+                processing = False
 
     except WebSocketDisconnect:
         print(f"WebSocket desconectado para usuario: {id_user}")
     except Exception as e:
         print(f"Error crítico en WebSocket: {str(e)}")
         try:
-            await websocket.close()
+            if not websocket.client_state.DISCONNECTED:
+                await websocket.close()
         except:
             pass
 

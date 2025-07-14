@@ -3,6 +3,7 @@ const startBtn = document.getElementById('startBtn');
 const errorMessage = document.getElementById('errorMessage');
 const progressCanvas = document.getElementById('progressCanvas');
 const ctx = progressCanvas.getContext('2d');
+
 let camera = null;
 let faceMesh = null;
 let faceFound = false;
@@ -12,6 +13,12 @@ let progress = 0;
 let progressAnim = null;
 let ws = null;
 let sending = false;
+let sendInterval = null;
+
+// ✅ Configuración optimizada
+const SEND_INTERVAL = 2000; // 2 segundos entre frames
+const MAX_RECONNECT_ATTEMPTS = 3;
+let reconnectAttempts = 0;
 
 function showMessage(msg, color = "#6ec6ff") {
     errorMessage.textContent = msg;
@@ -102,12 +109,12 @@ startBtn.addEventListener('click', async () => {
     faceMesh.onResults(onResults);
 
     camera = new Camera(video, {
-    onFrame: async () => {
-        await faceMesh.send({ image: video });
-    },
-    width: 660,
-    height: 480
-});
+        onFrame: async () => {
+            await faceMesh.send({ image: video });
+        },
+        width: 640, // ✅ Mejor resolución
+        height: 480
+    });
 
     enableCameraFlow();
     camera.start();
@@ -146,60 +153,139 @@ function onResults(results) {
     }
 }
 
+// ✅ WebSocket mejorado con manejo de reconexión
 function startWebSocket() {
+    // Cerrar conexión anterior si existe
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+    }
+
     ws = new WebSocket("/api/authentication/ws/login/1");
+
     ws.onopen = () => {
+        console.log("WebSocket conectado");
         sending = true;
-        sendFrames();
+        reconnectAttempts = 0;
+        startSendingFrames();
         showMessage("Autenticando... Mantente frente a la cámara.", "#b3c6e0");
     };
+
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.successful) {
-            showMessage("¡Autenticación exitosa!", "#34eb77");
-            sending = false;
-            ws.close();
-            if (camera) camera.stop();
-        } else if (data.error) {
-            if (data.error.includes("no hay un usuario registrado")) {
-            showMessage(data.error, "#ff6b6b");
-            sending = false;
-            ws.close();
-            startBtn.style.display = "";
-            startBtn.disabled = false;
-            startBtn.textContent = "Reintentar";
-            } else {
-                showMessage("Buscando rostro...", "#ff6b6b");
+        try {
+            const data = JSON.parse(event.data);
+
+            if (data.successful) {
+                showMessage("¡Autenticación exitosa!", "#34eb77");
+                cleanupWebSocket();
+
+                // Redirigir o hacer acción de éxito
+                setTimeout(() => {
+                    window.location.href = "/dashboard"; // Ajustar según tu app
+                }, 2000);
+
+            } else if (data.error) {
+                if (data.error.includes("no hay un usuario registrado")) {
+                    showMessage(data.error, "#ff6b6b");
+                    cleanupWebSocket();
+                    resetToStart();
+                } else {
+                    // Error temporal, continuar intentando
+                    showMessage("Analizando rostro...", "#ffa500");
+                }
             }
+        } catch (e) {
+            console.error("Error parsing message:", e);
         }
     };
-    ws.onerror = () => {
+
+    ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
         showMessage("Error de conexión con el servidor.", "#ff6b6b");
-        sending = false;
-        console.log("Ocurrio un error")
-        ws.close();
-        startBtn.style.display = "";
-        startBtn.disabled = false;
-        startBtn.textContent = "Reintentar";
+        handleWebSocketError();
     };
-    ws.onclose = () => {
-        sending = false;
+
+    ws.onclose = (event) => {
+        console.log("WebSocket cerrado:", event.code, event.reason);
+        cleanupWebSocket();
+
+        // Solo reconectar en ciertos casos
+        if (event.code === 1006 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            showMessage(`Reconectando... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, "#ffa500");
+            setTimeout(() => startWebSocket(), 2000);
+        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            showMessage("No se pudo conectar. Reinicia el proceso.", "#ff6b6b");
+            resetToStart();
+        }
     };
+}
+function startSendingFrames() {
+    sendInterval = setInterval(() => {
+        if (!sending || !ws || ws.readyState !== WebSocket.OPEN) {
+            stopSendingFrames();
+            return;
+        }
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            if (canvas.width === 0 || canvas.height === 0) {
+                console.log("Video no listo aún");
+                return;
+            }
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+            if (dataURL && dataURL.startsWith('data:image/')) {
+                ws.send(JSON.stringify({ image: dataURL }));
+                console.log("Frame enviado exitosamente");
+            } else {
+                console.log("DataURL inválido, saltando frame");
+            }
+
+        } catch (error) {
+            console.error("Error capturing frame:", error);
+        }
+    }, SEND_INTERVAL);
 }
 
-async function sendFrames() {
-    while (sending && ws && ws.readyState === 1) {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataURL = canvas.toDataURL('image/jpeg', 0.9);
-        ws.send(JSON.stringify({ image: dataURL }));
-        await new Promise(r => setTimeout(r, 500)); // cada 500ms
+function stopSendingFrames() {
+    if (sendInterval) {
+        clearInterval(sendInterval);
+        sendInterval = null;
     }
 }
+
+function cleanupWebSocket() {
+    sending = false;
+    stopSendingFrames();
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
+}
+
+function resetToStart() {
+    startBtn.style.display = "";
+    startBtn.disabled = false;
+    startBtn.textContent = "Iniciar Sesión";
+    if (camera) camera.stop();
+}
+
+function handleWebSocketError() {
+    cleanupWebSocket();
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        setTimeout(() => startWebSocket(), 2000);
+    } else {
+        resetToStart();
+    }
+}
+
+// ✅ Cleanup al cerrar ventana
 window.addEventListener('beforeunload', () => {
+    cleanupWebSocket();
     if (camera) camera.stop();
     stopProgressAnimation();
-    if (ws) ws.close();
 });
