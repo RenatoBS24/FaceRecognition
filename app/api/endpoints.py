@@ -15,6 +15,10 @@ router = APIRouter(
 async def get_users():
   return UserService.get_all_users()
 
+@router.get("/user-data/{id_user}")
+async def get_data_use(id_user: int):
+    return UserService.get_data_user_by(id_user)
+
 @router.websocket("/ws/login/{id_user}")
 async def login(websocket: WebSocket, id_user: int):
     await face_recognition_ws(websocket, id_user)

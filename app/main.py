@@ -25,6 +25,4 @@ async def register():
 @app.get("/landing-page")
 async def register():
     return FileResponse("app/static/landing-page.html")
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+

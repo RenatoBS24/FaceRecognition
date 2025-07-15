@@ -63,7 +63,7 @@ async def face_recognition_ws(websocket: WebSocket, id_user: int):
                     similarity = cosine_similarity(embedding, register_embedding)
                     print("La similitud entre los rostros es: " + str(similarity) + "%")
                     if similarity > umbral:
-                        await websocket.send_text(json.dumps({"successful": "Autenticacion exitosa"}))
+                        await websocket.send_text(json.dumps({"successful": "Autenticacion exitosa","id_user":id_user}))
                         print(f"Autenticación exitosa para usuario {id_user}")
                         await websocket.close()
                         break

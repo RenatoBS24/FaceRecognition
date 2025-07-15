@@ -3,7 +3,6 @@ const startBtn = document.getElementById('startBtn');
 const errorMessage = document.getElementById('errorMessage');
 const progressCanvas = document.getElementById('progressCanvas');
 const ctx = progressCanvas.getContext('2d');
-
 let camera = null;
 let faceMesh = null;
 let faceFound = false;
@@ -14,9 +13,7 @@ let progressAnim = null;
 let ws = null;
 let sending = false;
 let sendInterval = null;
-
-// ✅ Configuración optimizada
-const SEND_INTERVAL = 2000; // 2 segundos entre frames
+const SEND_INTERVAL = 2000;
 const MAX_RECONNECT_ATTEMPTS = 3;
 let reconnectAttempts = 0;
 
@@ -112,7 +109,7 @@ startBtn.addEventListener('click', async () => {
         onFrame: async () => {
             await faceMesh.send({ image: video });
         },
-        width: 640, // ✅ Mejor resolución
+        width: 640,
         height: 480
     });
 
@@ -152,15 +149,12 @@ function onResults(results) {
         }
     }
 }
-
-// ✅ WebSocket mejorado con manejo de reconexión
 function startWebSocket() {
-    // Cerrar conexión anterior si existe
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
     }
 
-    ws = new WebSocket("/api/authentication/ws/login/1");
+    ws = new WebSocket("/api/authentication/ws/login/3");
 
     ws.onopen = () => {
         console.log("WebSocket conectado");
@@ -176,11 +170,12 @@ function startWebSocket() {
 
             if (data.successful) {
                 showMessage("¡Autenticación exitosa!", "#34eb77");
+                if(data.id_user){
+                    localStorage.setItem("id-data-user", data.id_user);
+                }
                 cleanupWebSocket();
-
-                // Redirigir o hacer acción de éxito
                 setTimeout(() => {
-                    window.location.href = "/dashboard"; // Ajustar según tu app
+                    window.location.href = "/dashboard";
                 }, 2000);
 
             } else if (data.error) {
@@ -189,7 +184,6 @@ function startWebSocket() {
                     cleanupWebSocket();
                     resetToStart();
                 } else {
-                    // Error temporal, continuar intentando
                     showMessage("Analizando rostro...", "#ffa500");
                 }
             }
@@ -207,8 +201,6 @@ function startWebSocket() {
     ws.onclose = (event) => {
         console.log("WebSocket cerrado:", event.code, event.reason);
         cleanupWebSocket();
-
-        // Solo reconectar en ciertos casos
         if (event.code === 1006 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++;
             showMessage(`Reconectando... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, "#ffa500");
@@ -282,8 +274,6 @@ function handleWebSocketError() {
         resetToStart();
     }
 }
-
-// ✅ Cleanup al cerrar ventana
 window.addEventListener('beforeunload', () => {
     cleanupWebSocket();
     if (camera) camera.stop();
