@@ -3,18 +3,19 @@ document.addEventListener('DOMContentLoaded', () => {
 })
 
 
-function getData(){
-    const id = localStorage.getItem('id-data-user')
+function getData() {
+    const id = localStorage.getItem('id-data-user');
     fetch(`/api/authentication/user-data/${id}`)
         .then(res => res.json())
         .then(data => {
-            console.log(data)
+            console.log(data);
+             const date = new Date(data.last_access);
+             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+             const dateformat = date.toLocaleDateString('es-ES', options);
+             const timeFormat = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true });
+            document.getElementById('stat-number').innerHTML = data.logins;
+            document.getElementById('stat-time').innerHTML =`${dateformat} a las ${timeFormat}`;
+            document.getElementById('status').innerHTML = '✅'+data.state;
         })
-        .then(data => {
-            document.getElementById('stat-number').innerHTML = data.logins
-            document.getElementById('stat-time').innerHTML = data.last_access
-            document.getElementById('status').innerHTML = data.state
-
-        })
-        .catch(err => console.log(err))
+        .catch(err => console.log(err));
 }

@@ -66,6 +66,7 @@ async def face_recognition_ws(websocket: WebSocket, id_user: int):
                         await websocket.send_text(json.dumps({"successful": "Autenticacion exitosa","id_user":id_user}))
                         print(f"Autenticación exitosa para usuario {id_user}")
                         await websocket.close()
+                        UserService.user_update_data_access(id_user)
                         break
                     else:
                         await websocket.send_text(json.dumps({"error": "Rostro no coincide"}))

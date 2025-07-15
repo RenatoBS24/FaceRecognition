@@ -1,6 +1,8 @@
 import datetime
 import json
 
+from flask import session
+
 from ..schema.UserResponse import UserResponse
 from ..core.model.user import User
 from ..utils import Connection
@@ -85,3 +87,21 @@ def register_embedding(id_user, embedding):
         session.rollback()
         session.close()
         raise e
+
+def user_update_data_access(id_user: int):
+    session = Connection.get_session()
+    try:
+        user = session.query(User).filter(User.idUser == id_user).first()
+        if not user:
+            session.close()
+            raise ValueError(f"Usuario con ID {session['idUser']} no encontrado")
+        user.last_access = datetime.datetime.now()
+        user.logins += 1
+        session.commit()
+        session.close()
+        return True
+    except Exception as e:
+        session.rollback()
+        session.close()
+        raise e
+

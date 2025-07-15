@@ -154,7 +154,7 @@ function startWebSocket() {
         ws.close();
     }
 
-    ws = new WebSocket("/api/authentication/ws/login/3");
+    ws = new WebSocket("/api/authentication/ws/login/2");
 
     ws.onopen = () => {
         console.log("WebSocket conectado");
