@@ -13,6 +13,7 @@
 
         <div class="endpoint-test">
             <h3>POST /api/authentication/register/</h3>
+            <label for="registerFile" class="file-label">📁 Seleccionar imagen</label>
             <input type="file" id="registerFile" accept="image/*">
             <button id="btn-test">Probar Registro</button>
            <div style="position: relative;">
@@ -21,28 +22,28 @@
             </div>
         </div>
 
-        <div class="endpoint-test">
-            <h3>WebSocket /api/authentication/ws/login/{id_user}</h3>
-            <button onclick="testWSLogin()">Probar Login WebSocket</button>
-            <div id="wsStatus">Presiona "Probar Login WebSocket" para conectar</div>
-        </div>
+       <div class="endpoint-test">
+            <h3>POST /api/authentication/ws/login/{id_user}</h3>
+            <div class="login-fields" style="position: relative">
+                <label for="registerFileLogin" class="file-label">📁 Seleccionar imagen</label>
+                <input type="file" id="registerFileLogin" accept="image/*">
+                <input type="text" id="code" class="code-input" placeholder="Ingresa tu código numérico" maxlength="10" pattern="\d*">
+                <button id="btn-test-login">Probar Login</button>
+            </div>
+            <div id="wsStatus">Presiona "Probar Login" para conectar</div>
+       </div>
 
         <div class="curl-examples">
             <h3>📝 Ejemplos de uso en otras aplicaciones:</h3>
             <code>curl -X POST -F "file=@face.jpg" http://localhost:8000/api/authentication/register/</code>
         </div>
 
-        <div class="actions" style="margin-top: 30px;">
+      <!--  <div class="actions" style="margin-top: 30px;">
             <button onclick="goBack()">⬅️ Volver al Dashboard</button>
-        </div>
+        </div> -->
     </div>
 
     <script>
-        function testWSLogin() {
-            const status = document.getElementById('wsStatus');
-            status.textContent = 'Conectando WebSocket... (implementar conexión real)';
-        }
-
         function goBack() {
             window.location.href = '/dashboard';
         }

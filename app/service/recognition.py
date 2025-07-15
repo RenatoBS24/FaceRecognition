@@ -95,15 +95,29 @@ async def face_recognition_ws(websocket: WebSocket, id_user: int):
         except:
             pass
 
-def face_recognition(id_user:int,image:bytes):
+async def test_face_recognition_image(code_user: str, file:UploadFile=File(...)):
+    register_embedding = UserService.get_embedding_code(code_user)
+    if register_embedding is None:
+        return {"error": "no hay un usuario registrado con ese id"}
+
+    image = await file.read()
     array_np = np.frombuffer(image, dtype=np.uint8)
     img = cv2.imdecode(array_np, cv2.IMREAD_COLOR)
+    if img is None:
+        return {"error": "Imagen inválida"}
+
     try:
-        embedding = DeepFace.represent(img_path=img, enforce_detection=True)[0]["embedding"]
-        UserService.register_embedding(id_user, embedding)
-        return "Registry successful."
+        embedding = DeepFace.represent(img_path=img, enforce_detection=False)[0]["embedding"]
+        similarity = cosine_similarity(embedding, register_embedding)
+        print("La similitud entre los rostros es: " + str(similarity))
+        umbral = 0.6
+        if similarity > umbral:
+            return {"successful": "Autenticacion exitosa"}
+        else:
+            return {"error": "Rostro no coincide"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"No se detectó rostro: {str(e)}")
+        print(f"Error procesando DeepFace: {str(e)}")
+        return {"error": "No se detectó rostro válido"}
 
 
 def is_real_face(img):
