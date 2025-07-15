@@ -32,6 +32,17 @@ def get_embedding(id_user):
         session.close()
         raise e
 
+def get_embedding_code(code):
+    session = Connection.get_session()
+    try:
+        user = session.query(User).filter(User.code == str(code)).first()
+        if not user:
+            session.close()
+            raise ValueError(f"Usuario con ID {code} no encontrado")
+        return pickle.loads(user.encode)
+    except Exception as e:
+        session.close()
+        raise e
 
 def get_data_user_by(id_user):
     session = Connection.get_session()
@@ -102,6 +113,19 @@ def user_update_data_access(id_user: int):
         return True
     except Exception as e:
         session.rollback()
+        session.close()
+        raise e
+
+
+def if_exists_user(id_user):
+    session = Connection.get_session()
+    try:
+        user = session.query(User).filter(User.idUser == id_user).first()
+        if not user:
+            session.close()
+            return False
+        return True
+    except Exception as e:
         session.close()
         raise e
 

@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function getData() {
     const id = localStorage.getItem('id-data-user');
-    fetch(`/api/authentication/user-data/${id}`)
+        fetch(`/api/authentication/user-data/${id}`)
         .then(res => res.json())
         .then(data => {
             console.log(data);

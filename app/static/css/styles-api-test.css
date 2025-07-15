@@ -76,8 +76,12 @@
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
     overflow-x: auto;
+    overflow-y: auto;
     margin-top: 15px;
     min-height: 50px;
+    max-height: 300px;
+    scrollbar-width: thin;
+    scrollbar-color: #6ec6ff #182030;
 }
 
 #wsStatus {
@@ -115,8 +119,30 @@
     font-size: 0.95em;
     overflow-x: auto;
 }
-
-/* ========== RESPONSIVE ========== */
+.endpoint-test pre::-webkit-scrollbar {
+    width: 8px;
+    background: #182030;
+    border-radius: 8px;
+}
+.endpoint-test pre::-webkit-scrollbar-thumb {
+    background: #6ec6ff;
+    border-radius: 8px;
+}
+#copyRegisterResponse {
+    background: #6ec6ff;
+    color: #182030;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 14px;
+    font-size: 1em;
+    cursor: pointer;
+    box-shadow: 0 2px 8px #1488cc33;
+    transition: background 0.2s, color 0.2s;
+}
+#copyRegisterResponse:hover {
+    background: #1488cc;
+    color: #fff;
+}
 @media (max-width: 768px) {
     .landing h1 {
         font-size: 2.5em;

@@ -12,10 +12,13 @@
         <h2>🔌 Probar API como Servicio</h2>
 
         <div class="endpoint-test">
-            <h3>POST /api/authentication/register/{id_user}</h3>
+            <h3>POST /api/authentication/register/</h3>
             <input type="file" id="registerFile" accept="image/*">
-            <button onclick="testRegister()">Probar Registro</button>
-            <pre id="registerResponse">Selecciona una imagen y presiona "Probar Registro"</pre>
+            <button id="btn-test">Probar Registro</button>
+           <div style="position: relative;">
+                <pre id="registerResponse">Selecciona una imagen y presiona "Probar Registro"</pre>
+                <button id="copyRegisterResponse" style="position: absolute; top: 10px; right: 10px;">📋 Copiar</button>
+            </div>
         </div>
 
         <div class="endpoint-test">
@@ -26,7 +29,7 @@
 
         <div class="curl-examples">
             <h3>📝 Ejemplos de uso en otras aplicaciones:</h3>
-            <code>curl -X POST -F "file=@face.jpg" http://localhost:8000/api/authentication/register/1</code>
+            <code>curl -X POST -F "file=@face.jpg" http://localhost:8000/api/authentication/register/</code>
         </div>
 
         <div class="actions" style="margin-top: 30px;">
@@ -35,18 +38,6 @@
     </div>
 
     <script>
-        function testRegister() {
-            const fileInput = document.getElementById('registerFile');
-            const response = document.getElementById('registerResponse');
-
-            if (!fileInput.files[0]) {
-                response.textContent = 'Error: Selecciona una imagen primero';
-                return;
-            }
-
-            response.textContent = 'Simulando registro... (implementar llamada real al API)';
-        }
-
         function testWSLogin() {
             const status = document.getElementById('wsStatus');
             status.textContent = 'Conectando WebSocket... (implementar conexión real)';
@@ -56,5 +47,6 @@
             window.location.href = '/dashboard';
         }
     </script>
+    <script src="/static/js/api-test.js"></script>
 </body>
 </html>

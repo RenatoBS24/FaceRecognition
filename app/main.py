@@ -14,6 +14,9 @@ async def root():
 @app.get("/register")
 async def register():
     return FileResponse("app/static/index.html")
+@app.get("/update-view")
+async def register():
+    return FileResponse("app/static/update.html")
 @app.get("/dashboard")
 async def register():
     return FileResponse("app/static/dashboard.html")

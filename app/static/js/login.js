@@ -16,6 +16,7 @@ let sendInterval = null;
 const SEND_INTERVAL = 2000;
 const MAX_RECONNECT_ATTEMPTS = 3;
 let reconnectAttempts = 0;
+let authenticated = false;
 
 function showMessage(msg, color = "#6ec6ff") {
     errorMessage.textContent = msg;
@@ -55,6 +56,7 @@ function drawProgressCircle(progress) {
 }
 
 function startProgressAnimation() {
+    stopProgressAnimation()
     progress = 0;
     drawProgressCircle(0);
     let start = null;
@@ -76,7 +78,7 @@ function startProgressAnimation() {
 
 function stopProgressAnimation() {
     if (progressAnim) cancelAnimationFrame(progressAnim);
-    drawProgressCircle(0);
+    ctx.clearRect(0, 0, progressCanvas.width, progressCanvas.height);
 }
 
 function enableCameraFlow() {
@@ -104,7 +106,6 @@ startBtn.addEventListener('click', async () => {
     });
 
     faceMesh.onResults(onResults);
-
     camera = new Camera(video, {
         onFrame: async () => {
             await faceMesh.send({ image: video });
@@ -134,7 +135,7 @@ function onResults(results) {
                 } else {
                     clearInterval(stableTimer);
                     faceFound = false;
-                    showMessage("¡Iniciando autenticación en vivo!", "#34eb77");
+
                     stopProgressAnimation();
                     startWebSocket();
                 }
@@ -150,35 +151,47 @@ function onResults(results) {
     }
 }
 function startWebSocket() {
+    if (authenticated) {
+        return;
+    }
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
     }
 
-    ws = new WebSocket("/api/authentication/ws/login/2");
+    ws = new WebSocket(`ws://${window.location.host}/api/authentication/ws/login/2`);
 
     ws.onopen = () => {
+        if(authenticated){
+            ws.close();
+            return;
+        }
         console.log("WebSocket conectado");
         sending = true;
         reconnectAttempts = 0;
-        startSendingFrames();
-        showMessage("Autenticando... Mantente frente a la cámara.", "#b3c6e0");
+        setTimeout(() => {
+            startSendingFrames();
+         }, 100);
+        showMessage("Autenticando... Mantente frente a la cámara.", "#34eb77");
     };
 
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-
+            console.log("Mensaje recibido:", data);
             if (data.successful) {
                 showMessage("¡Autenticación exitosa!", "#34eb77");
+                authenticated = true;
                 if(data.id_user){
                     localStorage.setItem("id-data-user", data.id_user);
                 }
                 cleanupWebSocket();
+                console.log("autneticado")
                 setTimeout(() => {
                     window.location.href = "/dashboard";
-                }, 2000);
+                }, 20);
 
             } else if (data.error) {
+                console.error("Error:", data.error);
                 if (data.error.includes("no hay un usuario registrado")) {
                     showMessage(data.error, "#ff6b6b");
                     cleanupWebSocket();
@@ -200,14 +213,17 @@ function startWebSocket() {
 
     ws.onclose = (event) => {
         console.log("WebSocket cerrado:", event.code, event.reason);
+        ws = null;
         cleanupWebSocket();
-        if (event.code === 1006 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-            reconnectAttempts++;
-            showMessage(`Reconectando... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, "#ffa500");
-            setTimeout(() => startWebSocket(), 2000);
-        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-            showMessage("No se pudo conectar. Reinicia el proceso.", "#ff6b6b");
-            resetToStart();
+        if (!authenticated) {
+            if (event.code === 1006 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                showMessage(`Reconectando... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, "#ffa500");
+                setTimeout(() => startWebSocket(), 2000);
+            } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                showMessage("No se pudo conectar. Reinicia el proceso.", "#ff6b6b");
+                resetToStart();
+            }
         }
     };
 }
@@ -253,8 +269,9 @@ function cleanupWebSocket() {
     sending = false;
     stopSendingFrames();
     if (ws) {
-        ws.close();
-        ws = null;
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+            ws.close();
+        }
     }
 }
 

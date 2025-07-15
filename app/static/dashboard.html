@@ -41,16 +41,17 @@
 
     <script>
         function logout() {
+            localStorage.removeItem('id-data-user');
             window.location.href = '/';
         }
         function testAuth() {
             window.location.href = '/login';
         }
         function updateFace() {
-            window.location.href = '/register';
+            window.location.href = '/update-view';
         }
         function viewApiTest() {
-            window.location.href = '/api-test';
+            window.location.href = '/test';
         }
     </script>
 <script src="/static/js/dashboard.js"></script>

@@ -192,7 +192,12 @@ confirmBtn.addEventListener('click', () => {
     const formData = new FormData();
     formData.append('file', blob, 'rostro.png');
 
-    fetch('/api/authentication/register', {
+    let user_id = localStorage.getItem('id-data-user');
+    if(user_id ===null){
+        user_id = 2
+    }
+
+    fetch(`/api/authentication/update/${user_id}`, {
         method: 'POST',
         body: formData
     })
@@ -209,10 +214,11 @@ confirmBtn.addEventListener('click', () => {
             showMessage(data.detail || "Error al registrar el rostro.", "#ff6b6b");
         }
     } else {
-        showMessage("¡Rostro registrado exitosamente!", "#34eb77");
+        showMessage("¡Rostro actualizado exitosamente!", "#34eb77");
+        localStorage.removeItem('id-data-user');
         setTimeout(() => {
         window.location.href = "/";
-        }, 2000);
+        }, 3000);
     }
 })
 .catch(() => {
