@@ -3,7 +3,7 @@ from starlette.websockets import WebSocket
 
 from app.schema.UserResponse import UserResponse
 from app.service import UserService
-from app.service.recognition import face_recognition_ws, register_face, update_face,test_register,test_face_recognition_image
+from app.service.recognition import face_recognition_ws, register_face, update_face,test_register,test_face_recognition_image,face_recognition_ws_all
 
 router = APIRouter(
     prefix="/api/authentication",
@@ -16,12 +16,12 @@ async def get_users():
   return UserService.get_all_users()
 
 @router.get("/user-data/{id_user}")
-async def get_data_use(id_user: int):
+async def get_data_user(id_user: int):
     return UserService.get_data_user_by(id_user)
 
-@router.websocket("/ws/login/{id_user}")
-async def login(websocket: WebSocket, id_user: int):
-    await face_recognition_ws(websocket, id_user)
+@router.websocket("/ws/login")
+async def login(websocket: WebSocket):
+    await face_recognition_ws_all(websocket)
 
 @router.post("/register")
 async def register_face_endpoint(file: UploadFile = File(...)):

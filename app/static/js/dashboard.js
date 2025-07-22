@@ -16,6 +16,7 @@ function getData() {
             document.getElementById('stat-number').innerHTML = data.logins;
             document.getElementById('stat-time').innerHTML =`${dateformat} a las ${timeFormat}`;
             document.getElementById('status').innerHTML = '✅'+data.state;
+            document.getElementById('code_user').innerHTML = 'Usuario:  <strong>' + data.code_user + '</strong>';
         })
         .catch(err => console.log(err));
 }

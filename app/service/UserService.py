@@ -52,10 +52,12 @@ def get_data_user_by(id_user):
             session.close()
             raise ValueError(f"Usuario con ID {id_user} no encontrado")
         user_response = UserResponse(
+            code_user = user.code,
             state= user.state,
             last_access= str(user.last_access),
             logins= user.logins,
         )
+
         return UserResponse.to_json(user_response)
     except Exception as e:
         session.close()
@@ -129,3 +131,19 @@ def if_exists_user(id_user):
         session.close()
         raise e
 
+
+
+def get_all_embeddings():
+    session = Connection.get_session()
+    try:
+        users = session.query(User).all()
+        embeddings = []
+        for user in users:
+            if user.encode:
+                embedding = pickle.loads(user.encode)
+                embeddings.append((user.idUser, embedding))
+        session.close()
+        return embeddings
+    except Exception as e:
+        session.close()
+        raise e

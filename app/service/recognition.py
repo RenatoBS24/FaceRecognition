@@ -10,7 +10,6 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from app.service import UserService
 from app.utils import decode
 import cv2
-import asyncio
 import numpy as np
 
 
@@ -31,7 +30,6 @@ async def face_recognition_ws(websocket: WebSocket, id_user: int):
         await websocket.send_text(json.dumps({"error": "no hay un usuario registrado con ese id"}))
         await websocket.close()
         return
-
     umbral = 0.6
     try:
         while True:
@@ -87,6 +85,79 @@ async def face_recognition_ws(websocket: WebSocket, id_user: int):
 
     except WebSocketDisconnect:
         print(f"WebSocket desconectado para usuario: {id_user}")
+    except Exception as e:
+        print(f"Error crítico en WebSocket: {str(e)}")
+        try:
+            if not websocket.client_state.DISCONNECTED:
+                await websocket.close()
+        except:
+            pass
+
+
+
+async def face_recognition_ws_all(websocket: WebSocket):
+    await websocket.accept()
+    processing = False
+    print("WebSocket conectado")
+
+    umbral = 0.6
+    try:
+        while True:
+            try:
+                message = await websocket.receive_text()
+                print("Datos recibidos del frontend")
+                if processing:
+                    print("Saltando frame - ya procesando")
+                    continue
+
+                processing = True
+                try:
+                    data = json.loads(message)
+                    code = data.get('image', '')
+                except json.JSONDecodeError:
+                    await websocket.send_text(json.dumps({"error": "Formato JSON inválido"}))
+                    continue
+
+                if not code:
+                    await websocket.send_text(json.dumps({"error": "Datos vacíos"}))
+                    continue
+                try:
+                    image = decode.decode_image_base64(message)
+                    array_np = np.frombuffer(image, dtype=np.uint8)
+                    img = cv2.imdecode(array_np, cv2.IMREAD_COLOR)
+
+                    if img is None:
+                        await websocket.send_text(json.dumps({"error": "Imagen inválida"}))
+                        continue
+                    embedding = DeepFace.represent(img_path=img, enforce_detection=False)[0]["embedding"]
+                    encontrados = False
+                    for id_user, register_embedding in UserService.get_all_embeddings():
+                        similarity = cosine_similarity(embedding, register_embedding)
+                        print(f"Similitud con usuario {id_user}: {similarity}")
+                        if similarity > umbral:
+                            await websocket.send_text(json.dumps({"successful": "Autenticacion exitosa", "id_user": id_user}))
+                            print(f"Autenticación exitosa para usuario {id_user}")
+                            UserService.user_update_data_access(id_user)
+                            await websocket.close()
+                            encontrados = True
+                            break
+                    if not encontrados:
+                        await websocket.send_text(json.dumps({"error": "Rostro no coincide"}))
+                        await websocket.close()
+                        break
+
+                except Exception as e:
+                    print(f"Error procesando DeepFace: {str(e)}")
+                    await websocket.send_text(json.dumps({"error": "No se detectó rostro válido"}))
+
+            except Exception as e:
+                print(f"Error procesando mensaje: {str(e)}")
+                await websocket.send_text(json.dumps({"error": f"Error interno: {str(e)}"}))
+            finally:
+                processing = False
+
+    except WebSocketDisconnect:
+        print("WebSocket desconectado")
     except Exception as e:
         print(f"Error crítico en WebSocket: {str(e)}")
         try:
@@ -188,7 +259,10 @@ async def test_register(file:UploadFile=File(...)):
         )
     else:
         if isinstance(response, JSONResponse):
-            return response
+            return JSONResponse(
+                status_code=400,
+                content={"error_code": "no_face_detected", "detail": f"No se detectó rostro"}
+            )
         code = response.get("code")
         print(code)
         embedding = UserService.get_embedding_code(code)

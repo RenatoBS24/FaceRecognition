@@ -13,7 +13,13 @@ document.getElementById('btn-test').addEventListener('click',async() =>{
                 body: formData
             });
             const data = await res.json();
-            response.textContent = JSON.stringify(data.encode);
+            console.log(data);
+            if(data.error_code){
+                response.textContent = data.error_code;
+            }else{
+                response.textContent = JSON.stringify(data.encode);
+            }
+
         } catch (error) {
             response.textContent = 'Error al enviar la imagen';
         }

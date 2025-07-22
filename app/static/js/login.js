@@ -158,7 +158,7 @@ function startWebSocket() {
         ws.close();
     }
 
-    ws = new WebSocket(`ws://${window.location.host}/api/authentication/ws/login/2`);
+    ws = new WebSocket(`ws://${window.location.host}/api/authentication/ws/login`);
 
     ws.onopen = () => {
         if(authenticated){
